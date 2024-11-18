@@ -1,18 +1,20 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, AsyncStorage, Alert, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Alert, TextInput, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Audio } from 'expo-av';
 import { FontAwesome } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createNativeStackNavigator();
 
 const songs = [
-  { id: '1', title: 'Song 1', file: require('./assets/song1.mp3') },
-  { id: '2', title: 'Song 2', file: require('./assets/song2.mp3') },
-  { id: '3', title: 'Song 3', file: require('./assets/song3.mp3') },
+  { id: '1', title: 'Música 1', file: require('./assets/song1.mp3') },
+  { id: '2', title: 'Música 2', file: require('./assets/song2.mp3') },
+  { id: '3', title: 'Música 3', file: require('./assets/song3.mp3') },
 ];
 
+// Função para salvar uma música nos favoritos usando AsyncStorage
 const saveFavorite = async (songId) => {
   try {
     const favorites = await AsyncStorage.getItem('favorites');
@@ -20,26 +22,26 @@ const saveFavorite = async (songId) => {
     if (!favoritesArray.includes(songId)) {
       favoritesArray.push(songId);
       await AsyncStorage.setItem('favorites', JSON.stringify(favoritesArray));
-      Alert.alert('Success', 'Song added to favorites!');
+      Alert.alert('Sucesso', 'Música adicionada aos favoritos!');
     } else {
-      Alert.alert('Info', 'Song is already in favorites.');
+      Alert.alert('Info', 'A música já está nos favoritos.');
     }
   } catch (error) {
-    console.error('Error saving favorite', error);
+    console.error('Erro ao salvar favorito', error);
   }
 };
 
 const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Song List</Text>
+      <Text style={styles.title}>Lista de Músicas</Text>
       <FlatList
         data={songs}
         renderItem={({ item }) => (
           <View style={styles.songItem}>
             <Button
               title={item.title}
-              onPress={() => navigation.navigate('Details', { song: item })}
+              onPress={() => navigation.navigate('Detalhes', { song: item })}
               color="#841584"
             />
             <TouchableOpacity onPress={() => saveFavorite(item.id)}>
@@ -50,8 +52,8 @@ const HomeScreen = ({ navigation }) => {
         keyExtractor={item => item.id}
       />
       <Button
-        title="Go to Favorites"
-        onPress={() => navigation.navigate('Favorites')}
+        title="Ir para Favoritos"
+        onPress={() => navigation.navigate('Favoritos')}
         color="#841584"
       />
     </View>
@@ -67,7 +69,7 @@ const DetailsScreen = ({ route }) => {
       await sound.current.loadAsync(song.file);
       await sound.current.playAsync();
     } catch (error) {
-      console.error('Error playing sound', error);
+      console.error('Erro ao reproduzir som', error);
     }
   };
 
@@ -84,8 +86,8 @@ const DetailsScreen = ({ route }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{song.title}</Text>
-      <Button title="Play" onPress={playSound} color="#841584" />
-      <Button title="Stop" onPress={stopSound} color="#841584" />
+      <Button title="Tocar" onPress={playSound} color="#841584" />
+      <Button title="Parar" onPress={stopSound} color="#841584" />
     </View>
   );
 };
@@ -94,8 +96,12 @@ const FavoritesScreen = () => {
   const [favorites, setFavorites] = useState([]);
 
   const loadFavorites = async () => {
-    const favoritesList = await AsyncStorage.getItem('favorites');
-    setFavorites(favoritesList ? JSON.parse(favoritesList) : []);
+    try {
+      const favoritesList = await AsyncStorage.getItem('favorites');
+      setFavorites(favoritesList ? JSON.parse(favoritesList) : []);
+    } catch (error) {
+      console.error('Erro ao carregar favoritos', error);
+    }
   };
 
   useEffect(() => {
@@ -104,15 +110,15 @@ const FavoritesScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Favorites</Text>
+      <Text style={styles.title}>Favoritos</Text>
       {favorites.length > 0 ? (
         favorites.map((favId) => (
           <Text key={favId} style={styles.favoriteItem}>
-            {`Song ID: ${favId}`}
+            {`ID da Música: ${favId}`}
           </Text>
         ))
       ) : (
-        <Text>No favorites yet!</Text>
+        <Text>Sem favoritos ainda!</Text>
       )}
     </View>
   );
@@ -122,9 +128,26 @@ const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // Implement login functionality here
-    navigation.navigate('Home');
+  const handleLogin = async () => {
+    try {
+      const storedUsers = await AsyncStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      const userExists = users.find(
+        (user) => user.username === username && user.password === password
+      );
+
+      if (userExists) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } else {
+        Alert.alert('Erro', 'Usuário ou senha incorretos');
+      }
+    } catch (error) {
+      console.error('Erro ao fazer login', error);
+    }
   };
 
   return (
@@ -132,20 +155,20 @@ const LoginScreen = ({ navigation }) => {
       <Text style={styles.title}>Login</Text>
       <TextInput
         style={styles.input}
-        placeholder="Username"
+        placeholder="Usuário"
         value={username}
         onChangeText={setUsername}
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Senha"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
       <Button title="Login" onPress={handleLogin} color="#841584" />
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Don't have an account? Register</Text>
+      <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
+        <Text style={styles.link}>Não tem uma conta? Cadastre-se</Text>
       </TouchableOpacity>
     </View>
   );
@@ -155,28 +178,48 @@ const RegisterScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleRegister = () => {
-    // Implement registration functionality here
-    navigation.navigate('Home');
+  const handleRegister = async () => {
+    if (username.length === 0 || password.length === 0) {
+      Alert.alert('Erro', 'Usuário e senha não podem estar vazios');
+      return;
+    }
+
+    try {
+      const storedUsers = await AsyncStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      const userExists = users.find((user) => user.username === username);
+      if (userExists) {
+        Alert.alert('Erro', 'Usuário já existe');
+        return;
+      }
+
+      users.push({ username, password });
+      await AsyncStorage.setItem('users', JSON.stringify(users));
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+      navigation.navigate('Login');
+    } catch (error) {
+      console.error('Erro ao cadastrar', error);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+      <Text style={styles.title}>Cadastro</Text>
       <TextInput
         style={styles.input}
-        placeholder="Username"
+        placeholder="Usuário"
         value={username}
         onChangeText={setUsername}
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Senha"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
-      <Button title="Register" onPress={handleRegister} color="#841584" />
+      <Button title="Cadastrar" onPress={handleRegister} color="#841584" />
     </View>
   );
 };
@@ -186,10 +229,10 @@ const App = () => {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="Cadastro" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Details" component={DetailsScreen} />
-        <Stack.Screen name="Favorites" component={FavoritesScreen} />
+        <Stack.Screen name="Detalhes" component={DetailsScreen} />
+        <Stack.Screen name="Favoritos" component={FavoritesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
