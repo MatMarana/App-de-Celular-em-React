@@ -9,25 +9,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const Stack = createNativeStackNavigator();
 
 const songs = [
-  { id: '1', title: 'Música 1', file: require('./assets/song1.mp3') },
-  { id: '2', title: 'Música 2', file: require('./assets/song2.mp3') },
-  { id: '3', title: 'Música 3', file: require('./assets/song3.mp3') },
+  { id: '1', title: 'Fulminante', file: require('./assets/song1.mp3'), genre: 'Pagode' },
+  { id: '2', title: 'Cheia de Manias', file: require('./assets/song2.mp3'), genre: 'Pagode' },
+  { id: '3', title: 'Insegurança', file: require('./assets/song3.mp3'), genre: 'Pagode' },
+  { id: '4', title: 'Artigo 157', file: require('./assets/song4.mp3'), genre: 'Hip Hop' },
+  { id: '5', title: 'Jesus Chorou', file: require('./assets/song5.mp3'), genre: 'Hip Hop' },
 ];
 
-// Função para salvar uma música nos favoritos usando AsyncStorage
-const saveFavorite = async (songId) => {
+// Função para salvar ou remover uma música dos favoritos
+const toggleFavorite = async (songId) => {
   try {
     const favorites = await AsyncStorage.getItem('favorites');
     const favoritesArray = favorites ? JSON.parse(favorites) : [];
-    if (!favoritesArray.includes(songId)) {
+    if (favoritesArray.includes(songId)) {
+      const updatedFavorites = favoritesArray.filter(id => id !== songId);
+      await AsyncStorage.setItem('favorites', JSON.stringify(updatedFavorites));
+      Alert.alert('Info', 'Música removida dos favoritos.');
+    } else {
       favoritesArray.push(songId);
       await AsyncStorage.setItem('favorites', JSON.stringify(favoritesArray));
       Alert.alert('Sucesso', 'Música adicionada aos favoritos!');
-    } else {
-      Alert.alert('Info', 'A música já está nos favoritos.');
     }
   } catch (error) {
-    console.error('Erro ao salvar favorito', error);
+    console.error('Erro ao atualizar favoritos', error);
   }
 };
 
@@ -44,16 +48,21 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Detalhes', { song: item })}
               color="#841584"
             />
-            <TouchableOpacity onPress={() => saveFavorite(item.id)}>
+            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
               <FontAwesome name="star" size={24} color="gold" />
             </TouchableOpacity>
           </View>
         )}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
       />
       <Button
         title="Ir para Favoritos"
         onPress={() => navigation.navigate('Favoritos')}
+        color="#841584"
+      />
+      <Button
+        title="Filtrar por Gênero"
+        onPress={() => navigation.navigate('FiltroGenero')}
         color="#841584"
       />
     </View>
@@ -98,7 +107,9 @@ const FavoritesScreen = () => {
   const loadFavorites = async () => {
     try {
       const favoritesList = await AsyncStorage.getItem('favorites');
-      setFavorites(favoritesList ? JSON.parse(favoritesList) : []);
+      const favoritesArray = favoritesList ? JSON.parse(favoritesList) : [];
+      const favoriteSongs = songs.filter((song) => favoritesArray.includes(song.id));
+      setFavorites(favoriteSongs);
     } catch (error) {
       console.error('Erro ao carregar favoritos', error);
     }
@@ -112,9 +123,9 @@ const FavoritesScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Favoritos</Text>
       {favorites.length > 0 ? (
-        favorites.map((favId) => (
-          <Text key={favId} style={styles.favoriteItem}>
-            {`ID da Música: ${favId}`}
+        favorites.map((song) => (
+          <Text key={song.id} style={styles.favoriteItem}>
+            {song.title}
           </Text>
         ))
       ) : (
@@ -124,102 +135,24 @@ const FavoritesScreen = () => {
   );
 };
 
-const LoginScreen = ({ navigation }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleLogin = async () => {
-    try {
-      const storedUsers = await AsyncStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
-
-      const userExists = users.find(
-        (user) => user.username === username && user.password === password
-      );
-
-      if (userExists) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
-      } else {
-        Alert.alert('Erro', 'Usuário ou senha incorretos');
-      }
-    } catch (error) {
-      console.error('Erro ao fazer login', error);
-    }
-  };
+const FilterGenreScreen = () => {
+  const [selectedGenre, setSelectedGenre] = useState('Pagode');
+  const filteredSongs = songs.filter((song) => song.genre === selectedGenre);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Usuário"
-        value={username}
-        onChangeText={setUsername}
+      <Text style={styles.title}>Filtrar por Gênero</Text>
+      <Button title="Pagode" onPress={() => setSelectedGenre('Pagode')} color="#841584" />
+      <Button title="Hip Hop" onPress={() => setSelectedGenre('Hip Hop')} color="#841584" />
+      <FlatList
+        data={filteredSongs}
+        renderItem={({ item }) => (
+          <Text key={item.id} style={styles.favoriteItem}>
+            {item.title} - {item.genre}
+          </Text>
+        )}
+        keyExtractor={(item) => item.id}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title="Login" onPress={handleLogin} color="#841584" />
-      <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
-        <Text style={styles.link}>Não tem uma conta? Cadastre-se</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-const RegisterScreen = ({ navigation }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleRegister = async () => {
-    if (username.length === 0 || password.length === 0) {
-      Alert.alert('Erro', 'Usuário e senha não podem estar vazios');
-      return;
-    }
-
-    try {
-      const storedUsers = await AsyncStorage.getItem('users');
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
-
-      const userExists = users.find((user) => user.username === username);
-      if (userExists) {
-        Alert.alert('Erro', 'Usuário já existe');
-        return;
-      }
-
-      users.push({ username, password });
-      await AsyncStorage.setItem('users', JSON.stringify(users));
-      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
-      navigation.navigate('Login');
-    } catch (error) {
-      console.error('Erro ao cadastrar', error);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Cadastro</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Usuário"
-        value={username}
-        onChangeText={setUsername}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title="Cadastrar" onPress={handleRegister} color="#841584" />
     </View>
   );
 };
@@ -228,11 +161,10 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Cadastro" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Detalhes" component={DetailsScreen} />
         <Stack.Screen name="Favoritos" component={FavoritesScreen} />
+        <Stack.Screen name="FiltroGenero" component={FilterGenreScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -252,15 +184,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#333',
   },
-  input: {
-    width: '100%',
-    padding: 15,
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    backgroundColor: '#fff',
-  },
   songItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -271,10 +194,6 @@ const styles = StyleSheet.create({
   favoriteItem: {
     fontSize: 18,
     marginVertical: 5,
-  },
-  link: {
-    marginTop: 20,
-    color: '#841584',
   },
 });
 
