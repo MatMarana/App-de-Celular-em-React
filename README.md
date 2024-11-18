@@ -34,6 +34,16 @@ Este projeto é um app de player de música desenvolvido em **React Native** com
 ## 📂 Estrutura do Projeto
 
 - **HomeScreen**: Exibe a lista de músicas e permite navegar para a tela de detalhes, favoritos ou filtro de gênero.
-- **DetailsScreen**: Tela de reprodução de uma música específica com controles de áudio.
+- **DetailsScreen**: Tela de reprodução de uma música específica.
 - **FavoritesScreen**: Tela que lista todas as músicas favoritas do usuário.
 - **FilterGenreScreen**: Tela para filtrar músicas por gênero e exibir as correspondentes.
+
+  ## 🛠️ Funcionalidades Futuras
+
+Este app é um protótipo com funcionalidades básicas. Possíveis aprimoramentos incluem:
+
+- **Controle de Volume**: Adicionar controle de volume durante a reprodução da música.
+- **Progresso da Música**: Exibir o tempo de reprodução e permitir que o usuário avance ou retroceda na faixa.
+- **Playlists Personalizadas**: Permitir que os usuários criem e salvem suas próprias playlists.
+- **Integração com APIs de Streaming**: Expandir a biblioteca de músicas utilizando serviços de streaming como **Spotify** ou **YouTube Music**.
+
